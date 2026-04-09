@@ -1,0 +1,101 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  phone        String
+  passwordHash String
+  role         String    @default("renter") // "owner" | "renter"
+  city         String    @default("")
+  state        String    @default("")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  machines     Machine[]
+  bookings     Booking[]
+  reviews      Review[]
+}
+
+model Machine {
+  id            String    @id @default(cuid())
+  ownerId       String
+  owner         User      @relation(fields: [ownerId], references: [id])
+
+  name          String
+  type          String    // "jcb" | "crane" | "tractor" | "truck" | "bulldozer" | "excavator" | "roller" | "concrete_mixer"
+  brand         String
+  model         String
+  year          Int
+  description   String
+  imageUrl      String    @default("/machines/default.jpg")
+
+  dailyRate     Float
+  hourlyRate    Float     @default(0)
+  minBookingDays Int      @default(1)
+
+  city          String
+  state         String
+  pincode       String    @default("")
+  latitude      Float     @default(0)
+  longitude     Float     @default(0)
+
+  operatorIncluded Boolean @default(true)
+  fuelIncluded     Boolean @default(false)
+
+  capacity      String    @default("")
+  specifications String   @default("")
+
+  available     Boolean   @default(true)
+  verified      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  bookings      Booking[]
+  reviews       Review[]
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  machineId   String
+  machine     Machine  @relation(fields: [machineId], references: [id])
+  renterId    String
+  renter      User     @relation(fields: [renterId], references: [id])
+
+  startDate   DateTime
+  endDate     DateTime
+  totalDays   Int
+  totalAmount Float
+  status      String   @default("pending") // "pending" | "confirmed" | "active" | "completed" | "cancelled"
+
+  projectName    String  @default("")
+  projectAddress String  @default("")
+  notes          String  @default("")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  review      Review?
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  machineId String
+  machine   Machine  @relation(fields: [machineId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  rating    Int
+  comment   String   @default("")
+  createdAt DateTime @default(now())
+}
