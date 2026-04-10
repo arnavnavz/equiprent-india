@@ -9,6 +9,7 @@ export default function Home() {
   const router = useRouter();
   const [searchCity, setSearchCity] = useState("");
   const [searchType, setSearchType] = useState("all");
+  const [detectingLocation, setDetectingLocation] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,6 +20,32 @@ export default function Home() {
     if (searchType !== "all") params.set("type", searchType);
     if (searchCity) params.set("city", searchCity);
     router.push(`/machines?${params.toString()}`);
+  };
+
+  const detectLocation = () => {
+    if (!navigator.geolocation) return;
+    setDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&addressdetails=1`,
+            { headers: { "Accept-Language": "en" } }
+          );
+          const data = await res.json();
+          const addr = data.address || {};
+          const city = addr.city || addr.town || addr.village || addr.county || "";
+          const state = addr.state || "";
+          if (city) {
+            setSearchCity(city);
+            try { localStorage.setItem("equiprent_site_location", JSON.stringify({ city, state })); } catch { /* ignore */ }
+          }
+        } catch { /* ignore */ }
+        setDetectingLocation(false);
+      },
+      () => setDetectingLocation(false),
+      { timeout: 8000, enableHighAccuracy: false }
+    );
   };
 
   return (
@@ -65,13 +92,28 @@ export default function Home() {
               </div>
               <div>
                 <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1 sm:mb-1.5">Project Location</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Mumbai, Delhi"
-                  value={searchCity}
-                  onChange={(e) => setSearchCity(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-slate-900 text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-slate-50"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="e.g. Mumbai, Delhi"
+                    value={searchCity}
+                    onChange={(e) => setSearchCity(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg pl-3 pr-10 py-2.5 text-slate-900 text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-slate-50"
+                  />
+                  <button
+                    type="button"
+                    onClick={detectLocation}
+                    disabled={detectingLocation}
+                    title="Use my current location"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-amber-50 text-slate-400 hover:text-amber-600 transition-colors disabled:opacity-50"
+                  >
+                    {detectingLocation ? (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" /></svg>
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="flex items-end">
                 <button

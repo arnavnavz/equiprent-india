@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { MACHINE_TYPES, INDIAN_STATES, formatCurrency, getMachineTypeLabel, getMachineTypeIcon, MACHINE_IMAGES } from "@/lib/constants";
 
 interface Machine {
@@ -27,15 +27,6 @@ interface Machine {
 
 const SITE_LOCATION_KEY = "equiprent_site_location";
 
-function getSavedLocation(): { city: string; state: string } {
-  if (typeof window === "undefined") return { city: "", state: "" };
-  try {
-    const saved = localStorage.getItem(SITE_LOCATION_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch { /* ignore */ }
-  return { city: "", state: "" };
-}
-
 function MachinesContent() {
   const searchParams = useSearchParams();
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -45,26 +36,80 @@ function MachinesContent() {
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [showFilters, setShowFilters] = useState(false);
 
-  const savedLoc = getSavedLocation();
-  const [siteCity, setSiteCity] = useState(searchParams.get("city") || savedLoc.city);
-  const [siteState, setSiteState] = useState(savedLoc.state);
+  const [siteCity, setSiteCity] = useState("");
+  const [siteState, setSiteState] = useState("");
   const [showLocationBanner, setShowLocationBanner] = useState(false);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationReady, setLocationReady] = useState(false);
 
   useEffect(() => {
-    const loc = getSavedLocation();
-    if (!loc.city && !searchParams.get("city")) {
-      setShowLocationBanner(true);
+    try {
+      const saved = localStorage.getItem(SITE_LOCATION_KEY);
+      if (saved) {
+        const loc = JSON.parse(saved);
+        if (loc.city) {
+          setSiteCity(loc.city);
+          setSiteState(loc.state || "");
+          setLocationReady(true);
+          return;
+        }
+      }
+    } catch { /* ignore */ }
+
+    const paramCity = searchParams.get("city");
+    if (paramCity) {
+      setSiteCity(paramCity);
+      setLocationReady(true);
+      return;
     }
+
+    autoDetectLocation();
   }, [searchParams]);
 
-  const saveLocation = () => {
-    localStorage.setItem(SITE_LOCATION_KEY, JSON.stringify({ city: siteCity, state: siteState }));
-    setShowLocationBanner(false);
-    setCity(siteCity);
-    fetchMachines(siteCity, siteState);
-  };
+  const autoDetectLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setShowLocationBanner(true);
+      setLocationReady(true);
+      return;
+    }
 
-  const fetchMachines = async (userCity?: string, userState?: string) => {
+    setDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
+            { headers: { "Accept-Language": "en" } }
+          );
+          const data = await res.json();
+          const addr = data.address || {};
+          const detectedCity = addr.city || addr.town || addr.village || addr.county || "";
+          const detectedState = addr.state || "";
+
+          if (detectedCity) {
+            setSiteCity(detectedCity);
+            setSiteState(detectedState);
+            localStorage.setItem(SITE_LOCATION_KEY, JSON.stringify({ city: detectedCity, state: detectedState }));
+          } else {
+            setShowLocationBanner(true);
+          }
+        } catch {
+          setShowLocationBanner(true);
+        }
+        setDetectingLocation(false);
+        setLocationReady(true);
+      },
+      () => {
+        setDetectingLocation(false);
+        setShowLocationBanner(true);
+        setLocationReady(true);
+      },
+      { timeout: 8000, enableHighAccuracy: false }
+    );
+  }, []);
+
+  const fetchMachines = useCallback(async (userCity?: string, userState?: string) => {
     setLoading(true);
     const params = new URLSearchParams();
     if (type !== "all") params.set("type", type);
@@ -84,12 +129,22 @@ function MachinesContent() {
       setMachines([]);
     }
     setLoading(false);
-  };
+  }, [type, city, search, siteCity, siteState]);
 
   useEffect(() => {
-    fetchMachines();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (locationReady) fetchMachines();
+  }, [locationReady, fetchMachines]);
+
+  const saveLocation = () => {
+    localStorage.setItem(SITE_LOCATION_KEY, JSON.stringify({ city: siteCity, state: siteState }));
+    setShowLocationBanner(false);
+    setCity(siteCity);
+    fetchMachines(siteCity, siteState);
+  };
+
+  const handleDetectClick = () => {
+    autoDetectLocation();
+  };
 
   const handleFilter = (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,26 +171,51 @@ function MachinesContent() {
         </button>
       </div>
 
-      {/* Project Site Location Banner */}
-      {showLocationBanner && (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 sm:p-5 mb-5">
-          <div className="flex items-start gap-2.5 sm:gap-3">
-            <span className="text-xl sm:text-2xl mt-0.5">📍</span>
+      {/* Detecting location indicator */}
+      {detectingLocation && (
+        <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-5 animate-pulse">
+          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0"></div>
+          <p className="text-sm text-blue-700 font-medium">Detecting your location...</p>
+        </div>
+      )}
+
+      {/* Location Banner — shown when location is unknown */}
+      {showLocationBanner && !detectingLocation && (
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl p-4 sm:p-5 mb-5 text-white">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-500/20 rounded-full flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-slate-900 mb-0.5 text-sm sm:text-base">Where is your project site?</h3>
-              <p className="text-xs sm:text-sm text-slate-600 mb-3">Set your location to see nearby machines first</p>
+              <h3 className="font-bold text-sm sm:text-base mb-1">Set Your Project Site</h3>
+              <p className="text-xs sm:text-sm text-slate-400 mb-3">See nearby machines first and get accurate availability</p>
+
+              <button
+                onClick={handleDetectClick}
+                className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2.5 rounded-lg font-semibold hover:from-amber-600 hover:to-orange-600 active:from-amber-700 active:to-orange-700 transition-all text-sm mb-3 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Use My Current Location
+              </button>
+
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-px flex-1 bg-slate-700"></div>
+                <span className="text-xs text-slate-500">or enter manually</span>
+                <div className="h-px flex-1 bg-slate-700"></div>
+              </div>
+
               <div className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-3">
                 <input
                   type="text"
                   placeholder="City (e.g. Mumbai)"
                   value={siteCity}
                   onChange={(e) => setSiteCity(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                  className="w-full border border-slate-600 bg-slate-800 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                 />
                 <select
                   value={siteState}
                   onChange={(e) => setSiteState(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                  className="w-full border border-slate-600 bg-slate-800 rounded-lg px-3 py-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                 >
                   <option value="">Select State</option>
                   {INDIAN_STATES.map((s) => (
@@ -144,22 +224,23 @@ function MachinesContent() {
                 </select>
                 <button
                   onClick={saveLocation}
-                  className="w-full bg-amber-500 text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-amber-600 active:bg-amber-700 transition-colors text-sm"
+                  className="w-full bg-white text-slate-900 px-4 py-2.5 rounded-lg font-semibold hover:bg-slate-100 active:bg-slate-200 transition-colors text-sm"
                 >
                   Set Location
                 </button>
               </div>
             </div>
-            <button onClick={() => setShowLocationBanner(false)} className="text-slate-400 hover:text-slate-600 text-xl p-1">×</button>
+            <button onClick={() => setShowLocationBanner(false)} className="text-slate-500 hover:text-slate-300 text-lg p-1 shrink-0">×</button>
           </div>
         </div>
       )}
 
       {/* Current Location Indicator */}
-      {siteCity && !showLocationBanner && (
+      {siteCity && !showLocationBanner && !detectingLocation && (
         <div className="flex items-center gap-2 mb-4 text-sm">
-          <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-medium text-xs sm:text-sm truncate max-w-[200px] sm:max-w-none">
-            📍 {siteCity}{siteState ? `, ${siteState}` : ""}
+          <span className="bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 px-3 py-1.5 rounded-full font-medium text-xs sm:text-sm truncate max-w-[250px] sm:max-w-none flex items-center gap-1.5 shadow-sm">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            {siteCity}{siteState ? `, ${siteState}` : ""}
           </span>
           <button
             onClick={() => setShowLocationBanner(true)}
@@ -170,7 +251,7 @@ function MachinesContent() {
         </div>
       )}
 
-      {/* Filters - collapsible on mobile */}
+      {/* Filters */}
       <form onSubmit={handleFilter} className={`bg-white rounded-xl border border-slate-200 p-4 sm:p-6 mb-6 sm:mb-8 ${showFilters ? "block" : "hidden sm:block"}`}>
         <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-4 sm:gap-4">
           <div>
@@ -228,7 +309,7 @@ function MachinesContent() {
           <span className="text-5xl sm:text-6xl block mb-4">🔍</span>
           <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">No Machines Found</h3>
           <p className="text-slate-600 mb-6 text-sm">Try adjusting your filters or search in a different area</p>
-          <button onClick={() => { setType("all"); setCity(""); setSearch(""); setTimeout(fetchMachines, 100); }} className="text-amber-600 font-semibold hover:underline text-sm">
+          <button onClick={() => { setType("all"); setCity(""); setSearch(""); setTimeout(() => fetchMachines(), 100); }} className="text-amber-600 font-semibold hover:underline text-sm">
             Clear All Filters
           </button>
         </div>
@@ -239,7 +320,7 @@ function MachinesContent() {
           {siteCity && nearbyMachines.length > 0 && (
             <div className="mb-6 sm:mb-8">
               <h2 className="text-base sm:text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
-                <span className="text-green-600">●</span> Near Your Project Site
+                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> Near Your Project Site
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mb-3 sm:mb-4">Machines in or near {siteCity}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
