@@ -18,6 +18,7 @@ interface Booking {
   createdAt: string;
   machine: { id: string; name: string; type: string; imageUrl: string; city?: string; state?: string; owner?: { name: string; phone: string } };
   renter?: { name: string; phone: string; email: string };
+  review?: { id: string; rating: number; ownerRating: number; comment: string } | null;
 }
 
 interface User {
@@ -34,6 +35,26 @@ const STATUS_STYLES: Record<string, string> = {
   cancelled: "bg-red-100 text-red-800",
 };
 
+function StarSelector({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-slate-700 mb-1">{label}</label>
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => onChange(star)}
+            className={`text-2xl transition-colors ${star <= value ? "text-amber-500" : "text-slate-300"} hover:text-amber-400`}
+          >
+            ★
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function BookingsPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -41,6 +62,12 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [reviewingBookingId, setReviewingBookingId] = useState<string | null>(null);
+  const [machineRating, setMachineRating] = useState(0);
+  const [ownerRating, setOwnerRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewError, setReviewError] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -72,6 +99,48 @@ export default function BookingsPage() {
     setActionLoading(null);
   };
 
+  const submitReview = async (bookingId: string) => {
+    if (machineRating === 0 || ownerRating === 0) {
+      setReviewError("Please rate both the machine and the owner");
+      return;
+    }
+    setReviewLoading(true);
+    setReviewError("");
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId,
+          rating: machineRating,
+          ownerRating,
+          comment: reviewComment,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setReviewError(data.error || "Failed to submit review");
+      } else {
+        setReviewingBookingId(null);
+        setMachineRating(0);
+        setOwnerRating(0);
+        setReviewComment("");
+        await fetchData();
+      }
+    } catch {
+      setReviewError("Something went wrong");
+    }
+    setReviewLoading(false);
+  };
+
+  const openReviewForm = (bookingId: string) => {
+    setReviewingBookingId(bookingId);
+    setMachineRating(0);
+    setOwnerRating(0);
+    setReviewComment("");
+    setReviewError("");
+  };
+
   const filtered = filter === "all" ? bookings : bookings.filter((b) => b.status === filter);
 
   if (loading || !user) {
@@ -91,7 +160,6 @@ export default function BookingsPage() {
         </h1>
       </div>
 
-      {/* Status Filter */}
       <div className="flex flex-wrap gap-2 mb-6">
         {["all", "pending", "confirmed", "active", "completed", "cancelled"].map((s) => (
           <button
@@ -160,6 +228,55 @@ export default function BookingsPage() {
                   {booking.notes && (
                     <p className="text-sm text-slate-500 mt-2 italic">&quot;{booking.notes}&quot;</p>
                   )}
+
+                  {/* Review display */}
+                  {booking.review && (
+                    <div className="mt-3 bg-amber-50 rounded-lg p-3 text-sm">
+                      <p className="font-semibold text-amber-800 mb-1">Your Review</p>
+                      <div className="flex items-center gap-4">
+                        <span>Machine: <span className="text-amber-500">{"★".repeat(booking.review.rating)}{"☆".repeat(5 - booking.review.rating)}</span></span>
+                        <span>Owner: <span className="text-amber-500">{"★".repeat(booking.review.ownerRating)}{"☆".repeat(5 - booking.review.ownerRating)}</span></span>
+                      </div>
+                      {booking.review.comment && <p className="text-slate-600 mt-1">{booking.review.comment}</p>}
+                    </div>
+                  )}
+
+                  {/* Review form */}
+                  {booking.status === "completed" && !booking.review && user.role === "renter" && reviewingBookingId === booking.id && (
+                    <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                      <h4 className="font-bold text-slate-900">Rate Your Experience</h4>
+                      {reviewError && (
+                        <div className="bg-red-50 text-red-700 px-3 py-2 rounded-lg text-sm">{reviewError}</div>
+                      )}
+                      <StarSelector value={machineRating} onChange={setMachineRating} label="Machine Quality" />
+                      <StarSelector value={ownerRating} onChange={setOwnerRating} label="Owner Service" />
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1">Comment (optional)</label>
+                        <textarea
+                          value={reviewComment}
+                          onChange={(e) => setReviewComment(e.target.value)}
+                          rows={2}
+                          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none resize-none"
+                          placeholder="How was your experience?"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => submitReview(booking.id)}
+                          disabled={reviewLoading}
+                          className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-amber-600 disabled:opacity-50"
+                        >
+                          {reviewLoading ? "Submitting..." : "Submit Review"}
+                        </button>
+                        <button
+                          onClick={() => setReviewingBookingId(null)}
+                          className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-right shrink-0">
@@ -168,7 +285,6 @@ export default function BookingsPage() {
                     Booked {new Date(booking.createdAt).toLocaleDateString("en-IN")}
                   </p>
 
-                  {/* Actions */}
                   <div className="flex flex-col gap-2 mt-3">
                     {user.role === "owner" && booking.status === "pending" && (
                       <>
@@ -213,6 +329,14 @@ export default function BookingsPage() {
                         className="bg-red-100 text-red-700 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-red-200 disabled:opacity-50"
                       >
                         Cancel
+                      </button>
+                    )}
+                    {booking.status === "completed" && !booking.review && user.role === "renter" && reviewingBookingId !== booking.id && (
+                      <button
+                        onClick={() => openReviewForm(booking.id)}
+                        className="bg-amber-100 text-amber-700 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-amber-200"
+                      >
+                        ★ Write Review
                       </button>
                     )}
                   </div>

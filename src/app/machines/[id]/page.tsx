@@ -25,8 +25,16 @@ interface Machine {
   minBookingDays: number;
   avgRating: number;
   reviewCount: number;
-  owner: { id: string; name: string; phone: string; city: string; state: string };
-  reviews: { id: string; rating: number; comment: string; createdAt: string; user: { name: string } }[];
+  owner: {
+    id: string;
+    name: string;
+    phone: string;
+    city: string;
+    state: string;
+    ownerAvgRating: number;
+    ownerReviewCount: number;
+  };
+  reviews: { id: string; rating: number; ownerRating: number; comment: string; createdAt: string; user: { name: string } }[];
   bookings: { startDate: string; endDate: string }[];
 }
 
@@ -191,18 +199,40 @@ export default function MachineDetailPage() {
               </div>
             )}
 
-            {/* Owner Info */}
+            {/* Owner Info with Rating */}
             <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
               <h3 className="font-bold text-slate-900 mb-3">Machine Owner</h3>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-bold text-lg">
+                <div className="w-14 h-14 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-bold text-xl">
                   {machine.owner.name[0]}
                 </div>
-                <div>
-                  <p className="font-semibold text-slate-900">{machine.owner.name}</p>
+                <div className="flex-1">
+                  <p className="font-semibold text-slate-900 text-lg">{machine.owner.name}</p>
                   <p className="text-sm text-slate-500">{machine.owner.city}, {machine.owner.state}</p>
                 </div>
+                {machine.owner.ownerAvgRating > 0 && (
+                  <div className="text-right">
+                    <div className="flex items-center gap-1">
+                      <span className="text-amber-500 text-lg">★</span>
+                      <span className="text-xl font-bold text-slate-900">{machine.owner.ownerAvgRating.toFixed(1)}</span>
+                    </div>
+                    <p className="text-xs text-slate-500">{machine.owner.ownerReviewCount} owner review{machine.owner.ownerReviewCount !== 1 ? "s" : ""}</p>
+                  </div>
+                )}
               </div>
+              {machine.owner.ownerAvgRating > 0 && (
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-amber-500 h-full rounded-full transition-all"
+                        style={{ width: `${(machine.owner.ownerAvgRating / 5) * 100}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs text-slate-500 font-medium">{machine.owner.ownerAvgRating.toFixed(1)} / 5.0</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Reviews */}
@@ -212,9 +242,24 @@ export default function MachineDetailPage() {
                 <div className="space-y-4">
                   {machine.reviews.map((review) => (
                     <div key={review.id} className="border-b border-slate-100 last:border-0 pb-4 last:pb-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-xs font-bold text-slate-600">
+                          {review.user.name[0]}
+                        </div>
                         <span className="font-semibold text-sm">{review.user.name}</span>
-                        <span className="text-amber-500 text-sm">{"★".repeat(review.rating)}</span>
+                        <span className="text-xs text-slate-400">
+                          {new Date(review.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 mb-1 text-sm">
+                        <span className="flex items-center gap-1">
+                          Machine: <span className="text-amber-500">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
+                        </span>
+                        {review.ownerRating > 0 && (
+                          <span className="flex items-center gap-1">
+                            Owner: <span className="text-amber-500">{"★".repeat(review.ownerRating)}{"☆".repeat(5 - review.ownerRating)}</span>
+                          </span>
+                        )}
                       </div>
                       {review.comment && <p className="text-sm text-slate-600">{review.comment}</p>}
                     </div>

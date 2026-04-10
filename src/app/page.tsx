@@ -12,6 +12,9 @@ export default function Home() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    if (searchCity) {
+      try { localStorage.setItem("equiprent_site_location", JSON.stringify({ city: searchCity, state: "" })); } catch { /* ignore */ }
+    }
     const params = new URLSearchParams();
     if (searchType !== "all") params.set("type", searchType);
     if (searchCity) params.set("city", searchCity);

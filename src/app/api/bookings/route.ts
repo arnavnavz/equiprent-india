@@ -15,6 +15,7 @@ export async function GET() {
         include: {
           machine: { select: { id: true, name: true, type: true, imageUrl: true } },
           renter: { select: { name: true, phone: true, email: true } },
+          review: { select: { id: true, rating: true, ownerRating: true, comment: true } },
         },
         orderBy: { createdAt: "desc" },
       });
@@ -26,6 +27,7 @@ export async function GET() {
             select: { id: true, name: true, type: true, imageUrl: true, city: true, state: true },
             include: { owner: { select: { name: true, phone: true } } },
           },
+          review: { select: { id: true, rating: true, ownerRating: true, comment: true } },
         },
         orderBy: { createdAt: "desc" },
       });

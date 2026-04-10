@@ -71,6 +71,7 @@ CREATE TABLE "Review" (
     "machineId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "rating" INTEGER NOT NULL,
+    "ownerRating" INTEGER NOT NULL DEFAULT 0,
     "comment" TEXT NOT NULL DEFAULT '',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

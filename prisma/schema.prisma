@@ -95,7 +95,8 @@ model Review {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
 
-  rating    Int
-  comment   String   @default("")
-  createdAt DateTime @default(now())
+  rating      Int
+  ownerRating Int      @default(0)
+  comment     String   @default("")
+  createdAt   DateTime @default(now())
 }

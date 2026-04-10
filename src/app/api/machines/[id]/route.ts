@@ -8,7 +8,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const machine = await prisma.machine.findUnique({
       where: { id },
       include: {
-        owner: { select: { id: true, name: true, phone: true, city: true, state: true } },
+        owner: {
+          select: {
+            id: true, name: true, phone: true, city: true, state: true,
+            machines: {
+              select: { reviews: { select: { ownerRating: true } } },
+            },
+          },
+        },
         reviews: {
           include: { user: { select: { name: true } } },
           orderBy: { createdAt: "desc" },
@@ -28,7 +35,28 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       ? machine.reviews.reduce((sum, r) => sum + r.rating, 0) / machine.reviews.length
       : 0;
 
-    return NextResponse.json({ machine: { ...machine, avgRating, reviewCount: machine.reviews.length } });
+    const allOwnerReviews = machine.owner.machines.flatMap((om) => om.reviews);
+    const ownerAvgRating = allOwnerReviews.length > 0
+      ? allOwnerReviews.reduce((sum, r) => sum + r.ownerRating, 0) / allOwnerReviews.length
+      : 0;
+    const ownerReviewCount = allOwnerReviews.filter((r) => r.ownerRating > 0).length;
+
+    return NextResponse.json({
+      machine: {
+        ...machine,
+        avgRating,
+        reviewCount: machine.reviews.length,
+        owner: {
+          id: machine.owner.id,
+          name: machine.owner.name,
+          phone: machine.owner.phone,
+          city: machine.owner.city,
+          state: machine.owner.state,
+          ownerAvgRating,
+          ownerReviewCount,
+        },
+      },
+    });
   } catch (error) {
     console.error("Machine GET error:", error);
     return NextResponse.json({ error: "Failed to fetch machine" }, { status: 500 });
