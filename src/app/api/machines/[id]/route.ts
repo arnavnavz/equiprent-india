@@ -5,6 +5,8 @@ import { getCurrentUser } from "@/lib/auth";
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const currentUser = await getCurrentUser().catch(() => null);
+
     const machine = await prisma.machine.findUnique({
       where: { id },
       include: {
@@ -41,6 +43,22 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       : 0;
     const ownerReviewCount = allOwnerReviews.filter((r) => r.ownerRating > 0).length;
 
+    let showPhone = false;
+    if (currentUser) {
+      if (currentUser.id === machine.owner.id) {
+        showPhone = true;
+      } else {
+        const confirmedBooking = await prisma.booking.findFirst({
+          where: {
+            machineId: id,
+            renterId: currentUser.id,
+            status: { in: ["confirmed", "active"] },
+          },
+        });
+        if (confirmedBooking) showPhone = true;
+      }
+    }
+
     return NextResponse.json({
       machine: {
         ...machine,
@@ -49,7 +67,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         owner: {
           id: machine.owner.id,
           name: machine.owner.name,
-          phone: machine.owner.phone,
+          phone: showPhone ? machine.owner.phone : null,
           city: machine.owner.city,
           state: machine.owner.state,
           ownerAvgRating,

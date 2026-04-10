@@ -25,7 +25,7 @@ export default function RootLayout({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8">
               <div className="col-span-2 sm:col-span-1">
                 <h3 className="text-white font-bold text-lg mb-3 sm:mb-4">🏗️ EquipRent</h3>
-                <p className="text-xs sm:text-sm">India&apos;s trusted marketplace for renting heavy machinery with operators.</p>
+                <p className="text-xs sm:text-sm">India&apos;s trusted marketplace for renting heavy machinery with operators. Secure payments, insurance covered.</p>
               </div>
               <div>
                 <h4 className="text-white font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Equipment</h4>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { formatCurrency, getMachineTypeLabel, getMachineTypeIcon, MACHINE_IMAGES } from "@/lib/constants";
+import { formatCurrency, getMachineTypeLabel, getMachineTypeIcon, MACHINE_IMAGES, PLATFORM_FEE_PERCENT } from "@/lib/constants";
 
 interface Machine {
   id: string;
@@ -81,7 +81,9 @@ export default function MachineDetailPage() {
     ? Math.max(1, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)))
     : 0;
 
-  const totalAmount = machine ? totalDays * machine.dailyRate : 0;
+  const rentalAmount = machine ? totalDays * machine.dailyRate : 0;
+  const platformFee = Math.round(rentalAmount * PLATFORM_FEE_PERCENT / 100);
+  const totalAmount = rentalAmount + platformFee;
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,12 +213,17 @@ export default function MachineDetailPage() {
             <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 mb-4 sm:mb-6">
               <h3 className="font-bold text-slate-900 mb-3 text-sm sm:text-base">Machine Owner</h3>
               <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-11 h-11 sm:w-14 sm:h-14 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-bold text-lg sm:text-xl shrink-0">
+                <div className="w-11 h-11 sm:w-14 sm:h-14 bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-full flex items-center justify-center font-bold text-lg sm:text-xl shrink-0 shadow-md">
                   {machine.owner.name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-slate-900 text-base sm:text-lg truncate">{machine.owner.name}</p>
                   <p className="text-xs sm:text-sm text-slate-500">{machine.owner.city}, {machine.owner.state}</p>
+                  {machine.owner.phone ? (
+                    <p className="text-xs sm:text-sm text-slate-600 mt-0.5">📞 {machine.owner.phone}</p>
+                  ) : (
+                    <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 italic">Contact visible after booking confirmation</p>
+                  )}
                 </div>
                 {machine.owner.ownerAvgRating > 0 && (
                   <div className="text-right shrink-0">
@@ -241,6 +248,26 @@ export default function MachineDetailPage() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Platform Protection */}
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-4 sm:p-6 mb-4 sm:mb-6">
+              <h3 className="font-bold text-emerald-900 mb-3 text-sm sm:text-base flex items-center gap-2">
+                <span>🛡️</span> EquipRent Protection
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {[
+                  { icon: "✅", text: "Verified operator & equipment" },
+                  { icon: "💰", text: "Secure payment guarantee" },
+                  { icon: "📋", text: "Digital rental agreement" },
+                  { icon: "🔧", text: "Equipment damage coverage" },
+                ].map((item) => (
+                  <div key={item.text} className="flex items-center gap-2 text-xs sm:text-sm text-emerald-800">
+                    <span>{item.icon}</span>
+                    <span>{item.text}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Reviews */}
@@ -365,15 +392,25 @@ export default function MachineDetailPage() {
                     </div>
 
                     {totalDays > 0 && (
-                      <div className="bg-amber-50 rounded-xl p-3 sm:p-4 space-y-2">
+                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-3 sm:p-4 space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-slate-600">{formatCurrency(machine.dailyRate)} × {totalDays} day{totalDays !== 1 ? "s" : ""}</span>
-                          <span className="font-semibold">{formatCurrency(totalAmount)}</span>
+                          <span className="font-semibold">{formatCurrency(rentalAmount)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600 flex items-center gap-1">
+                            🛡️ Protection Fee
+                            <span className="text-[10px] text-slate-400">({PLATFORM_FEE_PERCENT}%)</span>
+                          </span>
+                          <span className="font-semibold">{formatCurrency(platformFee)}</span>
                         </div>
                         <div className="border-t border-amber-200 pt-2 flex justify-between">
                           <span className="font-bold text-slate-900">Total</span>
                           <span className="font-bold text-amber-600 text-lg">{formatCurrency(totalAmount)}</span>
                         </div>
+                        <p className="text-[10px] sm:text-[11px] text-slate-400 leading-tight">
+                          Includes insurance, payment protection & dispute resolution
+                        </p>
                       </div>
                     )}
 

@@ -54,6 +54,7 @@ CREATE TABLE "Booking" (
     "endDate" TIMESTAMP(3) NOT NULL,
     "totalDays" INTEGER NOT NULL,
     "totalAmount" DOUBLE PRECISION NOT NULL,
+    "platformFee" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "status" TEXT NOT NULL DEFAULT 'pending',
     "projectName" TEXT NOT NULL DEFAULT '',
     "projectAddress" TEXT NOT NULL DEFAULT '',

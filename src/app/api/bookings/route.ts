@@ -33,7 +33,25 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ bookings });
+    const sanitizedBookings = (bookings as Array<Record<string, unknown>>).map((b) => {
+      const status = b.status as string;
+      const showContact = ["confirmed", "active", "completed"].includes(status);
+      if (!showContact) {
+        if (b.renter) {
+          const r = b.renter as Record<string, unknown>;
+          b.renter = { ...r, phone: "Visible after confirmation", email: "Visible after confirmation" };
+        }
+        if (b.machine && typeof b.machine === "object") {
+          const m = b.machine as Record<string, unknown>;
+          if (m.owner && typeof m.owner === "object") {
+            m.owner = { ...(m.owner as Record<string, unknown>), phone: "Visible after confirmation" };
+          }
+        }
+      }
+      return b;
+    });
+
+    return NextResponse.json({ bookings: sanitizedBookings });
   } catch (error) {
     console.error("Bookings GET error:", error);
     return NextResponse.json({ error: "Failed to fetch bookings" }, { status: 500 });
@@ -80,7 +98,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Machine is already booked for these dates" }, { status: 400 });
     }
 
-    const totalAmount = totalDays * machine.dailyRate;
+    const rentalAmount = totalDays * machine.dailyRate;
+    const platformFee = Math.round(rentalAmount * 0.10);
+    const totalAmount = rentalAmount + platformFee;
 
     const booking = await prisma.booking.create({
       data: {
@@ -90,6 +110,7 @@ export async function POST(req: NextRequest) {
         endDate: end,
         totalDays,
         totalAmount,
+        platformFee,
         projectName: projectName || "",
         projectAddress: projectAddress || "",
         notes: notes || "",

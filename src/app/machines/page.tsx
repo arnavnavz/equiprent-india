@@ -272,22 +272,23 @@ function MachineCard({ machine }: { machine: Machine }) {
   return (
     <Link
       href={`/machines/${machine.id}`}
-      className="group bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg active:shadow-md transition-all hover:border-amber-200"
+      className="group bg-white rounded-xl overflow-hidden hover:shadow-xl active:shadow-md transition-all shadow-sm border border-slate-100 hover:border-amber-200"
     >
       <div className="aspect-[16/10] bg-slate-100 relative overflow-hidden">
         <img
           src={machine.imageUrl !== "/machines/default.jpg" ? machine.imageUrl : MACHINE_IMAGES[machine.type] || MACHINE_IMAGES.jcb}
           alt={machine.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 flex gap-2">
-          <span className="bg-white/90 backdrop-blur-sm text-[11px] sm:text-xs font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-slate-700">
+          <span className="bg-white/95 backdrop-blur-sm text-[11px] sm:text-xs font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-slate-700 shadow-sm">
             {getMachineTypeIcon(machine.type)} {getMachineTypeLabel(machine.type)}
           </span>
         </div>
         {machine.operatorIncluded && (
-          <span className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 bg-green-500/90 text-white text-[11px] sm:text-xs font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
-            Operator Incl.
+          <span className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 bg-emerald-500 text-white text-[11px] sm:text-xs font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full shadow-sm">
+            ✓ Operator
           </span>
         )}
       </div>
@@ -295,29 +296,29 @@ function MachineCard({ machine }: { machine: Machine }) {
         <h3 className="font-bold text-slate-900 group-hover:text-amber-600 transition-colors mb-0.5 sm:mb-1 text-sm sm:text-base truncate">
           {machine.name}
         </h3>
-        <p className="text-xs sm:text-sm text-slate-500 mb-2.5 sm:mb-3 truncate">
+        <p className="text-xs sm:text-sm text-slate-400 mb-2.5 sm:mb-3 truncate">
           {machine.brand} {machine.model} • {machine.year}
         </p>
         <div className="flex items-center justify-between mb-2.5 sm:mb-3">
           <div>
-            <span className="text-lg sm:text-xl font-bold text-amber-600">{formatCurrency(machine.dailyRate)}</span>
-            <span className="text-xs sm:text-sm text-slate-500">/day</span>
+            <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">{formatCurrency(machine.dailyRate)}</span>
+            <span className="text-xs sm:text-sm text-slate-400">/day</span>
           </div>
           {machine.avgRating > 0 && (
-            <div className="flex items-center gap-1 text-xs sm:text-sm">
+            <div className="flex items-center gap-1 text-xs sm:text-sm bg-amber-50 px-2 py-0.5 rounded-full">
               <span className="text-amber-500">★</span>
-              <span className="font-semibold">{machine.avgRating.toFixed(1)}</span>
-              <span className="text-slate-400">({machine.reviewCount})</span>
+              <span className="font-semibold text-amber-700">{machine.avgRating.toFixed(1)}</span>
+              <span className="text-amber-400">({machine.reviewCount})</span>
             </div>
           )}
         </div>
-        <div className="flex items-center justify-between text-xs sm:text-sm text-slate-500">
+        <div className="flex items-center justify-between text-xs sm:text-sm text-slate-400">
           <span className="flex items-center gap-1 truncate">
             <span>📍</span>
             <span className="truncate">{machine.city}, {machine.state}</span>
           </span>
           {machine.owner.ownerAvgRating > 0 && (
-            <span className="flex items-center gap-1 text-[11px] sm:text-xs bg-slate-100 px-1.5 sm:px-2 py-0.5 rounded-full shrink-0 ml-2" title="Owner Rating">
+            <span className="flex items-center gap-1 text-[11px] sm:text-xs bg-slate-50 px-1.5 sm:px-2 py-0.5 rounded-full shrink-0 ml-2" title="Owner Rating">
               👤 {machine.owner.ownerAvgRating.toFixed(1)} ★
             </span>
           )}

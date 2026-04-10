@@ -45,3 +45,5 @@ export function getMachineTypeLabel(type: string): string {
 export function getMachineTypeIcon(type: string): string {
   return MACHINE_TYPES.find((t) => t.value === type)?.icon || "🏗️";
 }
+
+export const PLATFORM_FEE_PERCENT = 10;

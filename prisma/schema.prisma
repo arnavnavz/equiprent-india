@@ -73,8 +73,9 @@ model Booking {
   startDate   DateTime
   endDate     DateTime
   totalDays   Int
-  totalAmount Float
-  status      String   @default("pending") // "pending" | "confirmed" | "active" | "completed" | "cancelled"
+  totalAmount  Float
+  platformFee  Float    @default(0)
+  status       String   @default("pending") // "pending" | "confirmed" | "active" | "completed" | "cancelled"
 
   projectName    String  @default("")
   projectAddress String  @default("")
