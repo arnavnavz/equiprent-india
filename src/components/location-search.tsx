@@ -53,7 +53,7 @@ export function LocationSearch({
   const [loading, setLoading] = useState(false);
   const [detectingGPS, setDetectingGPS] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
