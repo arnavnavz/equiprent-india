@@ -152,20 +152,20 @@ export default function BookingsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center gap-3 mb-8">
-        <Link href="/dashboard" className="text-slate-400 hover:text-slate-600">← Dashboard</Link>
-        <h1 className="text-3xl font-bold text-slate-900">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mb-6 sm:mb-8">
+        <Link href="/dashboard" className="text-slate-400 hover:text-slate-600 text-sm">← Dashboard</Link>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
           {user.role === "owner" ? "Booking Requests" : "My Bookings"}
         </h1>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-nowrap overflow-x-auto gap-2 mb-5 sm:mb-6 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible">
         {["all", "pending", "confirmed", "active", "completed", "cancelled"].map((s) => (
           <button
             key={s}
             onClick={() => setFilter(s)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors capitalize ${
+            className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors capitalize whitespace-nowrap shrink-0 ${
               filter === s ? "bg-amber-500 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
             }`}
           >
@@ -191,22 +191,22 @@ export default function BookingsPage() {
       ) : (
         <div className="space-y-4">
           {filtered.map((booking) => (
-            <div key={booking.id} className="bg-white rounded-xl border border-slate-200 p-6">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div key={booking.id} className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6">
+              <div className="flex flex-col gap-3 sm:gap-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-xl">{getMachineTypeIcon(booking.machine.type)}</span>
-                    <Link href={`/machines/${booking.machine.id}`} className="font-bold text-slate-900 hover:text-amber-600">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
+                    <span className="text-lg sm:text-xl">{getMachineTypeIcon(booking.machine.type)}</span>
+                    <Link href={`/machines/${booking.machine.id}`} className="font-bold text-slate-900 hover:text-amber-600 text-sm sm:text-base">
                       {booking.machine.name}
                     </Link>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_STYLES[booking.status]}`}>
+                    <span className={`px-2 sm:px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-semibold capitalize ${STATUS_STYLES[booking.status]}`}>
                       {booking.status}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-600 mb-3">
-                    <p>📅 {new Date(booking.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} — {new Date(booking.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
-                    <p>⏱️ {booking.totalDays} day{booking.totalDays !== 1 ? "s" : ""}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 text-xs sm:text-sm text-slate-600 mb-3">
+                    <p>📅 {new Date(booking.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} — {new Date(booking.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</p>
+                    <p>⏱️ {booking.totalDays} day{booking.totalDays !== 1 ? "s" : ""} • <span className="font-semibold text-amber-600">{formatCurrency(booking.totalAmount)}</span></p>
                     {booking.projectName && <p>🏗️ {booking.projectName}</p>}
                     {booking.projectAddress && <p>📍 {booking.projectAddress}</p>}
                   </div>
@@ -279,26 +279,21 @@ export default function BookingsPage() {
                   )}
                 </div>
 
-                <div className="text-right shrink-0">
-                  <p className="text-xl font-bold text-amber-600">{formatCurrency(booking.totalAmount)}</p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Booked {new Date(booking.createdAt).toLocaleDateString("en-IN")}
-                  </p>
-
-                  <div className="flex flex-col gap-2 mt-3">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <div className="flex flex-wrap gap-2">
                     {user.role === "owner" && booking.status === "pending" && (
                       <>
                         <button
                           onClick={() => updateBooking(booking.id, "confirmed")}
                           disabled={actionLoading === booking.id}
-                          className="bg-green-600 text-white px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50"
+                          className="bg-green-600 text-white px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold hover:bg-green-700 active:bg-green-800 disabled:opacity-50"
                         >
                           Confirm
                         </button>
                         <button
                           onClick={() => updateBooking(booking.id, "cancelled")}
                           disabled={actionLoading === booking.id}
-                          className="bg-red-100 text-red-700 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-red-200 disabled:opacity-50"
+                          className="bg-red-100 text-red-700 px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold hover:bg-red-200 active:bg-red-300 disabled:opacity-50"
                         >
                           Decline
                         </button>
@@ -308,7 +303,7 @@ export default function BookingsPage() {
                       <button
                         onClick={() => updateBooking(booking.id, "active")}
                         disabled={actionLoading === booking.id}
-                        className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
+                        className="bg-blue-600 text-white px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50"
                       >
                         Mark Active
                       </button>
@@ -317,7 +312,7 @@ export default function BookingsPage() {
                       <button
                         onClick={() => updateBooking(booking.id, "completed")}
                         disabled={actionLoading === booking.id}
-                        className="bg-slate-800 text-white px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-slate-900 disabled:opacity-50"
+                        className="bg-slate-800 text-white px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold hover:bg-slate-900 active:bg-black disabled:opacity-50"
                       >
                         Mark Completed
                       </button>
@@ -326,7 +321,7 @@ export default function BookingsPage() {
                       <button
                         onClick={() => updateBooking(booking.id, "cancelled")}
                         disabled={actionLoading === booking.id}
-                        className="bg-red-100 text-red-700 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-red-200 disabled:opacity-50"
+                        className="bg-red-100 text-red-700 px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold hover:bg-red-200 active:bg-red-300 disabled:opacity-50"
                       >
                         Cancel
                       </button>
@@ -334,7 +329,7 @@ export default function BookingsPage() {
                     {booking.status === "completed" && !booking.review && user.role === "renter" && reviewingBookingId !== booking.id && (
                       <button
                         onClick={() => openReviewForm(booking.id)}
-                        className="bg-amber-100 text-amber-700 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-amber-200"
+                        className="bg-amber-100 text-amber-700 px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold hover:bg-amber-200 active:bg-amber-300"
                       >
                         ★ Write Review
                       </button>
